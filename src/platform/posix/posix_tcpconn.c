@@ -180,7 +180,7 @@ tcp_doread(nni_tcp_conn *c)
 			// No bytes indicates a closed descriptor.
 			// This implicitly completes this (all!) aio.
 			nni_aio_list_remove(aio);
-			nni_aio_finish_error(aio, NNG_ECLOSED);
+			nni_aio_finish_error(aio, NNG_ECONNSHUT);
 			continue;
 		}
 
