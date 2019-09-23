@@ -196,6 +196,22 @@ tcp_doread(nni_tcp_conn *c)
 }
 
 static void
+tcp_error(void *arg, int err)
+{
+	nni_tcp_conn *c = arg;
+	nni_aio *aio;
+
+	nni_mtx_lock(&c->mtx);
+	while (((aio = nni_list_first(&c->readq)) != NULL) ||
+	    ((aio = nni_list_first(&c->writeq)) != NULL)) {
+		nni_aio_list_remove(aio);
+		nni_aio_finish_error(aio, err);
+	}
+	nni_posix_pfd_close(c->pfd);
+	nni_mtx_unlock(&c->mtx);
+}
+
+static void
 tcp_close(void *arg)
 {
 	nni_tcp_conn *c = arg;
@@ -242,7 +258,7 @@ tcp_cb(nni_posix_pfd *pfd, int events, void *arg)
 	nni_tcp_conn *c = arg;
 
 	if (events & (POLLHUP | POLLERR | POLLNVAL)) {
-		tcp_close(c);
+                tcp_error(c, NNG_ECONNSHUT);
 		return;
 	}
 	nni_mtx_lock(&c->mtx);
